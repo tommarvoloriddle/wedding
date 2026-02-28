@@ -398,10 +398,28 @@ const R=[
   {id:15,n:"Gourmet Spice & Tea Gift Set",c:"kitchen",p:"₹3,500",e:"🌶️",cl:false,cb:""},
   {id:16,n:"Custom Photo Memory Book",c:"personal",p:"₹4,000",e:"📸",cl:false,cb:""},
 ];
-const K='as_reg_2026';
+const SHEETS='https://script.google.com/macros/s/AKfycbw-t6T5rLtu8KCN0E7JkiNPF354fJm-Wr6S4WXHyJjoylVeeSXKCX0T-bCX2w2umPY/exec';
 let pid=null,fa='all',sq='';
-function load(){try{(JSON.parse(localStorage.getItem(K)||'[]')).forEach(s=>{const r=R.find(x=>x.id===s.id);if(r){r.cl=s.cl;r.cb=s.cb;}});}catch(_){}}
-function sv(){try{localStorage.setItem(K,JSON.stringify(R.map(r=>({id:r.id,cl:r.cl,cb:r.cb}))));}catch(_){}}
+
+async function load(){
+  try{
+    const res=await fetch(SHEETS);
+    const data=await res.json();
+    data.forEach(s=>{
+      const r=R.find(x=>x.id==s.id);
+      if(r){r.cl=(s.claimed===true||s.claimed==='TRUE'||s.claimed==='true');r.cb=s.claimedBy||'';}
+    });
+  }catch(e){console.warn('Sheets load failed',e);}
+}
+
+async function sv(item){
+  try{
+    await fetch(SHEETS,{
+      method:'POST',
+      body:JSON.stringify({id:item.id,claimed:true,claimedBy:item.cb})
+    });
+  }catch(e){console.warn('Sheets save failed',e);}
+}
 function rnd(){
   const g=document.getElementById('rg'),e=document.getElementById('re');
   const items=R.filter(r=>(fa==='all'||r.c===fa)&&r.n.toLowerCase().includes(sq.toLowerCase()));
@@ -433,12 +451,12 @@ function om(id){
   setTimeout(()=>document.getElementById('cn').focus(),100);
 }
 function cm(){document.getElementById('mo').classList.remove('open');document.body.style.overflow='';pid=null;}
-function cc(){
+async function cc(){
   const name=document.getElementById('cn').value.trim();
   if(!name){document.getElementById('cn').focus();return;}
   const r=R.find(x=>x.id===pid);
-  if(r){r.cl=true;r.cb=name;sv();rnd();}
-  cm();
+  if(r){r.cl=true;r.cb=name;rnd();cm();await sv(r);}
+  else{cm();}
 }
 document.querySelectorAll('.fb').forEach(b=>b.addEventListener('click',function(){
   document.querySelectorAll('.fb').forEach(x=>x.classList.remove('active'));
@@ -449,7 +467,7 @@ document.getElementById('mo').addEventListener('click',e=>{if(e.target===documen
 document.addEventListener('keydown',e=>{if(e.key==='Escape')cm();});
 const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');obs.unobserve(e.target);}});},{threshold:.12});
 document.querySelectorAll('.reveal,.rl,.rr').forEach(el=>obs.observe(el));
-load();rnd();
+(async()=>{await load();rnd();})();
 </script>
 </body>
 </html>
